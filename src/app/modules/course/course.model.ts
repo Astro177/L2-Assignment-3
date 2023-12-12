@@ -4,7 +4,7 @@ import { TCourse } from "./course.interface";
 const courseSchema = new Schema<TCourse>({
   title: { type: String, required: true },
   instructor: { type: String, required: true },
-  categoryId: { type: String, required: true },
+  categoryId: { type: String, required: true, unique: true },
   price: { type: Number, required: true },
   tags: [
     {
