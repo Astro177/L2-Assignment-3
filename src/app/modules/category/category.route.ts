@@ -1,13 +1,13 @@
 import express from "express";
 import { validateRequest } from "../../middlewares/validateRequest";
-import { categorySchemas } from "./category.validation";
 import { categoryControllers } from "./category.controller";
+import { categoryValidationSchemas } from "./category.validation";
 
 const router = express.Router();
 
 router.post(
   "/categories",
-  validateRequest(categorySchemas.createCategorySchema),
+  validateRequest(categoryValidationSchemas.createCategoryValidationSchema),
   categoryControllers.createCategory
 );
 router.get("/categories", categoryControllers.getAllCategory);

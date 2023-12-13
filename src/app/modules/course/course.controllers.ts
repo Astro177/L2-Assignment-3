@@ -10,6 +10,7 @@ const createCourse = async (
   try {
     const courseData = req.body;
     const result = await CourseServices.createCourseIntoDB(courseData);
+
     res.status(200).json({
       success: true,
       statusCode: httpStatus.OK,
