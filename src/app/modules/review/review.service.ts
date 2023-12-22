@@ -1,4 +1,3 @@
-import httpStatus from "http-status";
 import { CourseModel } from "../course/course.model";
 import { TReview } from "./review.interface";
 import { ReviewModel } from "./review.model";
@@ -21,27 +20,6 @@ const createReviewIntoDB = async (reviewData: TReview) => {
   }
 };
 
-const getSingleCourseWithReviewFromDB = async (courseId: string) => {
-  const singleCourse = await CourseModel.findById(courseId);
-  if (singleCourse) {
-    const validCourseId = new mongoose.Types.ObjectId(courseId);
-    const reviews = await ReviewModel.aggregate([
-      { $match: { courseId: validCourseId } },
-      {
-        $project: {
-          _id: 0,
-          courseId: 1,
-          rating: 1,
-          review: 1,
-        },
-      },
-    ]);
-    const result = { singleCourse, reviews };
-    return result;
-  }
-};
-
 export const ReviewServices = {
   createReviewIntoDB,
-  getSingleCourseWithReviewFromDB,
 };

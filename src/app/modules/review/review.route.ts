@@ -11,9 +11,4 @@ router.post(
   reviewControllers.createReview
 );
 
-router.get(
-  "/courses/:courseId/reviews",
-  reviewControllers.getSingleCourseWithReviews
-);
-
 export const ReviewRoutes = router;

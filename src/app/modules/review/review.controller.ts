@@ -22,29 +22,6 @@ const createReview = async (
   }
 };
 
-const getSingleCourseWithReviews = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    const { courseId } = req.params;
-    const result = await ReviewServices.getSingleCourseWithReviewFromDB(
-      courseId
-    );
-
-    res.status(200).json({
-      success: true,
-      statusCode: httpStatus.OK,
-      message: "Course and Reviews retrieved successfully!",
-      data: result,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
 export const reviewControllers = {
   createReview,
-  getSingleCourseWithReviews,
 };
