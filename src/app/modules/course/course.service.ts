@@ -2,13 +2,12 @@ import { CategoryModel } from "../category/category.model";
 import { TCourse } from "./course.interface";
 import { CourseModel } from "./course.model";
 
-const calculateWeek = (startDate: string, endDate: string) => {
+const calculateWeeks = (startDate: string, endDate: string) => {
   const start = new Date(startDate).getTime();
   const end = new Date(endDate).getTime();
 
   const difference = end - start;
   const totalWeeks = Math.ceil(difference / (1000 * 60 * 60 * 24 * 7));
-  console.log(totalWeeks);
   return totalWeeks;
 };
 
@@ -18,7 +17,7 @@ const createCourseIntoDB = async (courseData: TCourse) => {
   });
   if (categoryExists) {
     if ((courseData?.startDate, courseData?.endDate)) {
-      const durationInWeeks = calculateWeek(
+      const durationInWeeks = calculateWeeks(
         courseData?.startDate,
         courseData?.endDate
       );
