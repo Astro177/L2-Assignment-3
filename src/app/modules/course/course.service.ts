@@ -71,8 +71,8 @@ const getAllCourseFromDB = async (query: Record<string, unknown>) => {
 
   const result = CourseModel.find(queryObj).populate("categoryId");
 
-  let limit = 10; // Default limit
-  let page = 1; // Default page
+  let limit = 10;
+  let page = 1;
 
   if (query.limit) {
     limit = Number(query.limit);
@@ -102,7 +102,6 @@ const getAllCourseFromDB = async (query: Record<string, unknown>) => {
     total,
   };
 
-  // Return both data and meta object
   return {
     data: await paginateData,
     meta,
@@ -265,9 +264,7 @@ const updateCourseIntoDB = async (
       await session.commitTransaction();
       await session.endSession();
 
-      const result = await CourseModel.findById(courseId).populate(
-        "categoryId"
-      );
+      const result = await CourseModel.findById(courseId);
 
       return result;
     } catch (error: any) {

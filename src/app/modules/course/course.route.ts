@@ -17,12 +17,12 @@ router.get(
   courseControllers.getSingleCourseWithReviews
 );
 
-router.get("/course/best", courseControllers.getBestCourse);
-
 router.put(
   "/courses/:courseId",
   validateRequest(courseValidations.updateCourseValidationSchema),
   courseControllers.updateCourse
 );
+
+router.get("/course/best", courseControllers.getBestCourse);
 
 export const CourseRoutes = router;

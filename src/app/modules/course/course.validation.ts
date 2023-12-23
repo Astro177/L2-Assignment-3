@@ -73,7 +73,7 @@ const updateCourseValidationSchema = z.object({
           }),
           isDeleted: z.boolean().default(false),
         })
-        .nullable()
+        .optional()
     )
     .optional(),
   startDate: z.string({ required_error: "Star Date is required" }).optional(),
