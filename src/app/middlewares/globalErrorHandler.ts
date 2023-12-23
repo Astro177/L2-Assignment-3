@@ -38,5 +38,6 @@ export const globalErrorHandler: ErrorRequestHandler = (
     message,
     errorMessage,
     errorDetails,
+    stack: error?.stack,
   });
 };

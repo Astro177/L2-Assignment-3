@@ -28,11 +28,16 @@ const getAllCourse = async (
   next: NextFunction
 ) => {
   try {
-    const result = await CourseServices.getAllCourseFromDB({ query });
+    const { query } = req;
+    const result = await CourseServices.getAllCourseFromDB(query);
+
+    const { data, meta } = result;
+
     res.status(200).json({
       success: true,
       message: "Courses retrieved successfully!",
-      data: result,
+      meta,
+      data,
     });
   } catch (error) {
     next(error);

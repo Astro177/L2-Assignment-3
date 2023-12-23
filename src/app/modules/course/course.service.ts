@@ -27,8 +27,8 @@ const createCourseIntoDB = async (courseData: TCourse) => {
 const getAllCourseFromDB = async (query: Record<string, unknown>) => {
   let queryObj = { ...query };
 
-  const excludeFieldFromQuery = ["limit", "page", "sortBy", "sortOrder"];
-  excludeFieldFromQuery.forEach((ele) => delete queryObj[ele]);
+  const deleteFieldFromQuery = ["limit", "page", "sortBy", "sortOrder"];
+  deleteFieldFromQuery.forEach((item) => delete queryObj[item]);
 
   if (queryObj?.level) {
     queryObj["details.level"] = queryObj["level"];
@@ -71,8 +71,8 @@ const getAllCourseFromDB = async (query: Record<string, unknown>) => {
 
   const result = CourseModel.find(queryObj).populate("categoryId");
 
-  let limit = 2;
-  let page = 1;
+  let limit = 10; // Default limit
+  let page = 1; // Default page
 
   if (query.limit) {
     limit = Number(query.limit);
@@ -84,17 +84,29 @@ const getAllCourseFromDB = async (query: Record<string, unknown>) => {
   let paginateData = result.skip(skip).limit(limit);
 
   if (query.sortBy) {
-    const sortBye = query.sortBy as string;
+    const sortBy = query.sortBy as string;
     let sortOrder = "asc";
     if (query.sortOrder) {
       sortOrder = query.sortOrder as string;
     }
     const sortOption: { [key: string]: string } = {};
-    sortOption[sortBye] = sortOrder;
+    sortOption[sortBy] = sortOrder;
     paginateData = paginateData.sort(sortOption as { $meta: any });
   }
 
-  return await paginateData;
+  const total = await CourseModel.countDocuments(queryObj);
+
+  const meta = {
+    page,
+    limit,
+    total,
+  };
+
+  // Return both data and meta object
+  return {
+    data: await paginateData,
+    meta,
+  };
 };
 
 const getSingleCourseWithReviewFromDB = async (courseId: string) => {
