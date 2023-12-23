@@ -1,17 +1,9 @@
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { CategoryModel } from "../category/category.model";
 import { ReviewModel } from "../review/review.model";
 import { TCourse } from "./course.interface";
 import { CourseModel } from "./course.model";
-
-const calculateWeeks = (startDate: string, endDate: string) => {
-  const start = new Date(startDate).getTime();
-  const end = new Date(endDate).getTime();
-
-  const difference = end - start;
-  const totalWeeks = Math.ceil(difference / (1000 * 60 * 60 * 24 * 7));
-  return totalWeeks;
-};
+import { calculateWeeks } from "../../utils/calculateWeeks";
 
 const createCourseIntoDB = async (courseData: TCourse) => {
   const categoryExists = await CategoryModel.findById({
@@ -27,12 +19,82 @@ const createCourseIntoDB = async (courseData: TCourse) => {
       const result = await CourseModel.create(newData);
       return result;
     }
+  } else {
+    throw new Error("Invalid CategoryId");
   }
 };
 
-const getAllCourseFromDB = async () => {
-  const result = await CourseModel.find();
-  return result;
+const getAllCourseFromDB = async (query: Record<string, unknown>) => {
+  let queryObj = { ...query };
+
+  const excludeFieldFromQuery = ["limit", "page", "sortBy", "sortOrder"];
+  excludeFieldFromQuery.forEach((ele) => delete queryObj[ele]);
+
+  if (queryObj?.level) {
+    queryObj["details.level"] = queryObj["level"];
+    delete queryObj["level"];
+  }
+  if (queryObj?.tags) {
+    queryObj["tags"] = {
+      $elemMatch: {
+        name: queryObj["tags"],
+      },
+    };
+  }
+
+  if (queryObj?.startDate && queryObj?.endDate) {
+    queryObj.startDate = { $gte: queryObj.startDate };
+    queryObj.endDate = { $lte: queryObj.endDate };
+  }
+
+  if (queryObj?.maxPrice && queryObj?.minPrice) {
+    const bothValue = {
+      $and: [
+        {
+          price: { $gte: queryObj.minPrice },
+        },
+        {
+          price: { $lte: queryObj.maxPrice },
+        },
+      ],
+    };
+    delete queryObj["minPrice"];
+    delete queryObj["maxPrice"];
+    queryObj = { ...bothValue };
+  } else if (queryObj?.minPrice) {
+    queryObj["price"] = { $gte: queryObj.minPrice };
+    delete queryObj["minPrice"];
+  } else if (queryObj?.maxPrice) {
+    queryObj["price"] = { $lte: queryObj.maxPrice };
+    delete queryObj["maxPrice"];
+  }
+
+  const result = CourseModel.find(queryObj).populate("categoryId");
+
+  let limit = 2;
+  let page = 1;
+
+  if (query.limit) {
+    limit = Number(query.limit);
+  }
+  if (query.page) {
+    page = Number(query.page);
+  }
+  const skip = (page - 1) * limit;
+  let paginateData = result.skip(skip).limit(limit);
+
+  if (query.sortBy) {
+    const sortBye = query.sortBy as string;
+    let sortOrder = "asc";
+    if (query.sortOrder) {
+      sortOrder = query.sortOrder as string;
+    }
+    const sortOption: { [key: string]: string } = {};
+    sortOption[sortBye] = sortOrder;
+    paginateData = paginateData.sort(sortOption as { $meta: any });
+  }
+
+  return await paginateData;
 };
 
 const getSingleCourseWithReviewFromDB = async (courseId: string) => {
@@ -52,6 +114,157 @@ const getSingleCourseWithReviewFromDB = async (courseId: string) => {
     ]);
     const result = { singleCourse, reviews };
     return result;
+  } else {
+    throw new Error("Invalid CourseId");
+  }
+};
+
+const updateCourseIntoDB = async (
+  courseId: string,
+  courseData: Partial<TCourse>
+) => {
+  const {
+    details,
+    tags,
+    startDate,
+    endDate,
+    durationInWeeks,
+    ...remainingData
+  } = courseData;
+
+  const courseExists = await CourseModel.findById(courseId);
+
+  if (courseExists) {
+    const session = await mongoose.startSession();
+
+    try {
+      session.startTransaction();
+
+      if (durationInWeeks) {
+        throw new Error("You cannot change course duration manually!");
+      }
+
+      const modifiedUpdatedData: Record<string, unknown> = { ...remainingData };
+
+      if (details && Object.keys(details).length) {
+        for (const [key, value] of Object.entries(details)) {
+          modifiedUpdatedData[`details.${key}`] = value;
+        }
+      }
+
+      if (startDate || endDate) {
+        if (startDate && endDate) {
+          const durationInWeeks = calculateWeeks(startDate, endDate);
+
+          const updateCourseDuration = await CourseModel.findByIdAndUpdate(
+            courseId,
+            { durationInWeeks, startDate, endDate },
+            {
+              new: true,
+              runValidators: true,
+              session,
+            }
+          );
+          if (!updateCourseDuration) {
+            throw new Error("Failed to update");
+          }
+        } else if (startDate) {
+          const getNonUpdatedCourse = await CourseModel.findById(courseId);
+          if (!getNonUpdatedCourse) {
+            throw new Error("This course does not exist!");
+          }
+
+          const durationInWeeks = calculateWeeks(
+            startDate,
+            getNonUpdatedCourse.endDate
+          );
+
+          const updateCourseDuration = await CourseModel.findByIdAndUpdate(
+            courseId,
+            { durationInWeeks, startDate },
+            {
+              new: true,
+              runValidators: true,
+              session,
+            }
+          );
+          if (!updateCourseDuration) {
+            throw new Error("Failed to update");
+          }
+        } else if (endDate) {
+          const getCourseBeforeUpdated = await CourseModel.findById(courseId);
+          if (!getCourseBeforeUpdated) {
+            throw new Error("This course does not exist!");
+          }
+
+          const durationInWeeks = calculateWeeks(
+            getCourseBeforeUpdated.startDate,
+            endDate
+          );
+
+          const updateCourseDuration = await CourseModel.findByIdAndUpdate(
+            courseId,
+            { durationInWeeks, endDate },
+            {
+              new: true,
+              runValidators: true,
+              session,
+            }
+          );
+          if (!updateCourseDuration) {
+            throw new Error("Failed to update");
+          }
+        }
+      }
+
+      const updatedCourse = await CourseModel.findByIdAndUpdate(
+        courseId,
+        modifiedUpdatedData,
+        {
+          new: true,
+          runValidators: true,
+          session,
+        }
+      );
+      if (!updatedCourse) {
+        throw new Error("Failed to update course!");
+      }
+
+      if (tags && tags.length > 0) {
+        const updatedTags = tags.filter((tag) => tag.name && !tag.isDeleted);
+
+        const updateTags = await CourseModel.findByIdAndUpdate(
+          courseId,
+          {
+            $set: { tags: updatedTags },
+          },
+          {
+            new: true,
+            runValidators: true,
+            session,
+          }
+        );
+
+        if (!updateTags) {
+          throw new Error("Failed to update tags in the course!");
+        }
+      }
+
+      await session.commitTransaction();
+      await session.endSession();
+
+      const result = await CourseModel.findById(courseId).populate(
+        "categoryId"
+      );
+
+      return result;
+    } catch (error: any) {
+      await session.abortTransaction();
+      await session.endSession();
+      throw new Error(error);
+    }
+  } else {
+    throw new Error("Course not found!");
   }
 };
 
@@ -90,4 +303,5 @@ export const CourseServices = {
   getAllCourseFromDB,
   getSingleCourseWithReviewFromDB,
   getBestCourseFromDB,
+  updateCourseIntoDB,
 };

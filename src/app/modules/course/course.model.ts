@@ -2,9 +2,13 @@ import { Schema, model } from "mongoose";
 import { TCourse } from "./course.interface";
 
 const courseSchema = new Schema<TCourse>({
-  title: { type: String, required: true },
+  title: { type: String, required: true, unique: true },
   instructor: { type: String, required: true },
-  categoryId: { type: Schema.ObjectId, required: true, ref: "Category" },
+  categoryId: {
+    type: Schema.ObjectId,
+    required: true,
+    ref: "Category",
+  },
   price: { type: Number, required: true },
   tags: [
     {

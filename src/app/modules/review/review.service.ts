@@ -16,7 +16,7 @@ const createReviewIntoDB = async (reviewData: TReview) => {
     };
     return result;
   } else {
-    throw new Error("CourseId does not exist");
+    throw new Error("Invalid CourseId");
   }
 };
 
